@@ -1,0 +1,16 @@
+[package]
+name = "rust-tun-nat"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tun = {version = "0", features = ["async"]}
+pnet = "0"
+futures = "0"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+rand = "0.8"
+slotmap = "1"
+chrono="0"
