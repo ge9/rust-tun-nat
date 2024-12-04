@@ -51,6 +51,8 @@ impl PacketInfo{
         Self{src_tuple: (Ipv4Addr::new(0, 0, 0, 0),0) , dst_tuple: (Ipv4Addr::new(0, 0, 0, 0),0), size: 0}
     }
 }
+
+//abstract TCP, UDP, ICMP-echo (use identifier as port)
 pub trait PortManager{
     fn get_info(packet: &Ipv4Packet) -> PacketInfo;
     fn set_src_port(packet: MutableIpv4Packet, val:u16) -> Option<MutableIpv4Packet>;//Do NOT use this for ICMP Echo Reply

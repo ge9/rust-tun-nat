@@ -1,7 +1,7 @@
 
 use chrono::DateTime;
 use crate::ll::{LLIter, LList};
-use crate::keygen::{AddrPort, RI, LI};
+use crate::keygen::{MyAddrPort, RI, LI};
 use crate::nattable::RLHash;
 use crate::util::{PacketInfo, NatEntry};
 use crate::tcpstate::{TcpStateMachine, TcpState};
@@ -27,7 +27,7 @@ pub struct TcpStateHashNATTable<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKe
     entrylist: SlotMap<DefaultKey, (NatEntry<LK>, u16)>,
     connlist: LList<ConnInfo>,
     connhash: HashMap<(u16, (Ipv4Addr, u16)), DefaultKey>,
-    //A "marker" that indicates short_timeout.  Concretely, the connection with shortest remaining life in those who will live longer than last GC time+short_timeout (if none, Defaultkey::null)
+    //A "marker" that indicates short_timeout.  Concretely, the connection with shortest remaining life in those who will live longer than [last GC time + short_timeout] (if none, Defaultkey::null)
     conn_least_longer_than_short_timeout: DefaultKey,
     rlhash: RLHash<LK, C>
 }
@@ -70,11 +70,11 @@ impl<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKey>> TcpStateHashNATTable<LK
         }
         for k in ord{
             let ent = &self.entrylist[k];
-            println!("{}[{}]{}->{}", ent.1, ent.0.global_port, AddrPort::from_t(ent.0.local_tuple), ent.0.nat_key);
+            println!("{}[{}]{}->{}", ent.1, ent.0.global_port, MyAddrPort::from_t(ent.0.local_tuple), ent.0.nat_key);
             for en in hs.get(&k).unwrap(){
                 let datetime = DateTime::from_timestamp(en.1.will_expire as i64, 0).unwrap();
                 let newdate = datetime.format("%Y-%m-%d %H:%M:%S");
-                println!("  {}[{:?}]{}", newdate, en.1.state_m.state, AddrPort::from_t(en.0.1));
+                println!("  {}[{:?}]{}", newdate, en.1.state_m.state, MyAddrPort::from_t(en.0.1));
             }
         }
         // for (e,k) in LLIter(&self.connlist, self.connlist.head()){
@@ -102,7 +102,7 @@ impl<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKey>> TcpStateHashNATTable<LK
                     self._insert_and_egress(now, p, flags, port, li.lk)
                 }
                 None => {
-                    self.write_log(format!("[{}]{} no_empty_port: {} -> {}\n", self.name, now, AddrPort::from_t(p.src_tuple), li.lk));
+                    self.write_log(format!("[{}]{} no_empty_port: {} -> {}\n", self.name, now, MyAddrPort::from_t(p.src_tuple), li.lk));
                     None
                 }
             }
@@ -168,7 +168,7 @@ impl<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKey>> TcpStateHashNATTable<LK
                 self.update_connstate(true, conntuple, flags, t, entry_key);
                 Self::ingress(p, &mut self.entrylist[entry_key].0)},
             None => {self.write_log(format!("[{}]{} ingress_not_found: via {} from {}\n", self.name, t, 
-            p.dst_tuple.1, AddrPort::from_t(p.src_tuple))); None}
+            p.dst_tuple.1, MyAddrPort::from_t(p.src_tuple))); None}
         }
     }
     fn ingress<'a>(p: PacketInfo, entry:&mut NatEntry<LK>) -> Option<(Ipv4Addr, u16)> {
@@ -213,7 +213,7 @@ impl<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKey>> TcpStateHashNATTable<LK
         self.update_least_longer(now);
     }
     fn _gc_head_entry(&mut self, entry: &NatEntry<LK>, t: u64) {
-        self.write_log(format!("[{}]{} removing: via {}: {} -> {}\n", self.name, t, entry.global_port, AddrPort::from_t(entry.local_tuple), entry.nat_key));
+        self.write_log(format!("[{}]{} removing: via {}: {} -> {}\n", self.name, t, entry.global_port, MyAddrPort::from_t(entry.local_tuple), entry.nat_key));
         self.rlhash.remove(entry.local_tuple, entry.global_port,entry.nat_key)
     }
     fn _insert_and_egress<'a>(&mut self, now: u64, p: PacketInfo, flags: u8, global_port: u16, nat_key:LK) ->  Option<u16> {
@@ -225,7 +225,7 @@ impl<LK:Display+Copy+Eq+Hash, C: KeyGen<LK, DefaultKey>> TcpStateHashNATTable<LK
 
         self.rlhash.insert(k,  p.src_tuple,global_port, nat_key);
         
-        self.write_log(format!("[{}]{} inserting: via {}: {} -> {}\n", self.name, now, global_port, AddrPort::from_t(p.src_tuple), nat_key));
+        self.write_log(format!("[{}]{} inserting: via {}: {} -> {}\n", self.name, now, global_port, MyAddrPort::from_t(p.src_tuple), nat_key));
         Self::egress(p, &mut self.entrylist.get_mut(k).unwrap().0)
     }
 }
