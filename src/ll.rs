@@ -1,5 +1,6 @@
 use slotmap::{DefaultKey, Key, SlotMap};
-
+// A simple doubly linked list implementation with slotmap. This is unrelated to any NAT/network things.
+// ref. https://github.com/orlp/slotmap/issues/120, https://github.com/GallagherCommaJack/linked-slab
 
 struct Node<T> {
     value: T,

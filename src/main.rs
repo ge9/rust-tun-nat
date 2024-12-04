@@ -1,7 +1,7 @@
 use crate::nat::{NATter, HashNATTer};
 use crate::statenattable::TcpStateHashNATTable;
 use crate::nattable::HashNATTable;
-use crate::keygen::{FullConeNATTable, RestrictedConeNATTable, SymmetricNATTable};
+use crate::keygen::{FullCone, QuasiRestrictedCone, QuasiSymmetric, QuasiPortRestrictedCone, AddressDependent, AddressPortDependent};
 use crate::util::{TcpPortManager, UdpPortManager, IcmpEchoPortManager};
 use crate::util::port_range;
 
@@ -25,8 +25,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let mut config = tun::Configuration::default();
 
     config
-        .address((10, 0, 0, 1))
-        .netmask((255, 255, 255, 0))
+    //    .address((10, 0, 0, 1))
+    //    .netmask((255, 255, 255, 0))
         .name("rustnat")
         .up();
 
@@ -42,10 +42,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let global_addr = std::net::Ipv4Addr::new(192, 168, 0, 135);
     //let port_range= port_range::gen_v6plus(33);
-    let port_range: Vec<u16>= (19900..19999).collect();
-    let tcp_table = TcpStateHashNATTable::new(String::from("tcp"), 2000, 120, RestrictedConeNATTable::new(port_range.clone()),Arc::clone(&reffile));
-    let udp_table = HashNATTable::new(String::from("udp"), 150, FullConeNATTable::new(port_range.clone()),Arc::clone(&reffile));
-    let icmp_echo_table= HashNATTable::new(String::from("icmp-echo"), 150,SymmetricNATTable::new(port_range.clone()),Arc::clone(&reffile));
+    let port_range: Vec<u16>= (19900..20000).collect();//100 ports
+    let tcp_table = TcpStateHashNATTable::new(String::from("tcp"), 2000, 120, QuasiRestrictedCone::new(port_range.clone()),Arc::clone(&reffile));
+    let udp_table = HashNATTable::new(String::from("udp"), 150, AddressPortDependent::new(port_range.clone(), get_next_port),Arc::clone(&reffile));
+    let icmp_echo_table= HashNATTable::new(String::from("icmp-echo"), 150,QuasiSymmetric::new(port_range.clone()),Arc::clone(&reffile));
     let mut tcpn = HashNATTer{table:tcp_table, global_addr: global_addr, p: core::marker::PhantomData::<TcpPortManager>};
     let mut udpn = HashNATTer{table:udp_table, global_addr: global_addr, p: core::marker::PhantomData::<UdpPortManager>};
     let mut icmpn = HashNATTer{table:icmp_echo_table, global_addr: global_addr, p: core::marker::PhantomData::<IcmpEchoPortManager>};
@@ -88,4 +88,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     }
     Ok(())
 
+}
+
+fn get_next_port(x: u16) -> u16 {
+    ((x-19900+1) % 100) + 19900
 }
